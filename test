@@ -1,7 +1,0 @@
-movstr stdout Player1Score: br
-mov p1_score stdin
-movstr stdout Player2Score: br
-mov p2_score stdin
-add total p1_score p2_score
-movstr stdout Total br
-mov stdout total

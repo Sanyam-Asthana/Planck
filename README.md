@@ -111,7 +111,7 @@ mov stdout total
 
 # Planned Features and Limitations
 
-Planck is in very early stages as of writing this, so naturally, it has a lot o limitations:
+Planck is in very early stages as of writing this, so naturally, it has a lot of limitations:
 
 1. The biggest is probably the absence of conditionals and looping constructs. This prevents Planck from being Turing complete. Implementing this would take some time, since a labelling system would have to be added first.
 
@@ -120,6 +120,8 @@ Planck is in very early stages as of writing this, so naturally, it has a lot o 
 3. Only supports 32-bit integer variables.
 
 4. The memory constraints of the language are a limitation in some sense, but are also necessary for efficient working on microcontrollers (which Planck is originally intended for).
+
+5. Potential bugs in the VM.
 
 
 
