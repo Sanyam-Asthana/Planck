@@ -47,9 +47,17 @@ int var_get(char* id) {
 int var_resolve(char* tok) {
 	if(strcmp(tok, "zero") == 0) return 0;
 
-	if(tok[0] == '-' || (tok[0] >= '0' && tok[0] <= '9')) {
-		return atoi(tok);
+	if(tok[0] == '-') {
+	       	if(tok[1] >= '0' && tok[1] <= '9') {
+			return atoi(tok);
+		}
+
+		return -1 * var_get(tok + 1);
 	}
+
+	if(tok[0] >= '0' && tok[0] <= '9') {
+		return atoi(tok);
+    	}
 
 	return var_get(tok);
 }
@@ -102,13 +110,6 @@ uint8_t execute_line(char* line, int line_num) {
 		}
 	}
 
-	else if(strcmp(op, "sub") == 0) {
-		if(strcmp(dest, "zero") != 0) {
-			int result = var_resolve(src1) - var_resolve(src2);
-			var_set(dest, result);
-		}
-	}
-
 	else if(strcmp(op, "div") == 0) {
 		if(strcmp(dest, "zero") != 0) {
 			int src2_resolved = var_resolve(src2);
@@ -125,9 +126,33 @@ uint8_t execute_line(char* line, int line_num) {
 		puts(dest);
 	}
 
-	else if(strcmp(op, "putv") == 0) {
-		print_int(var_resolve(dest), stdout);
-		fputs("\n", stdout);
+	else if(strcmp(op, "mov") == 0) {
+
+		if(strcmp(src1, "stdin") == 0) {
+			char buf[16];
+			fgets(buf, sizeof(buf), stdin);
+
+			buf[strcspn(buf, "\n")] = '\0';
+
+			var_set(dest, var_resolve(buf));
+			return OK;
+		}
+
+		FILE* stream = NULL;
+		if(strcmp(dest, "stdout") == 0) {
+			stream = stdout;
+		}
+		else if(strcmp(dest, "stderr") == 0) {
+			stream = stderr;
+		}
+		else {
+			var_set(dest, var_resolve(src1));
+		}
+
+		if(stream) {
+			print_int(var_resolve(src1), stream);
+			fputs("\n", stream);
+		}
 	}
 
 	else {
@@ -164,6 +189,8 @@ int main(int argc, char** argv) {
 			return ERR;	
 		}
 	}
+
+	return OK;
 }
 
 
