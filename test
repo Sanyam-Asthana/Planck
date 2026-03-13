@@ -1,1 +1,3 @@
-movstr stdout hello br
+add stdin 0 5
+add z stdin 0
+mov stdout z

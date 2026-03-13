@@ -19,7 +19,11 @@ typedef struct {
 static var_t var_tabl[32];
 static uint8_t var_count = 0;
 
+void throw_error(int line_num, char* error_msg);
+void throw_immediate_error(int line_num, char* error_msg);
+
 void var_set(char* id, int val) {
+
     for(int i = 0; i < var_count; i++) {
         if(strcmp(var_tabl[i].id, id) == 0) {
             var_tabl[i].val = val;
@@ -44,7 +48,12 @@ int var_get(char* id) {
 	return 0;
 }
 
-int var_resolve(char* tok) {
+int var_resolve(int line_num, char* tok) {
+	if((strcmp(tok, "stdout")) == 0
+	||(strcmp(tok, "stderr")) == 0
+	||(strcmp(tok, "stdin")) == 0)
+	throw_immediate_error(line_num, "not a valid variable name!");
+
 	if(strcmp(tok, "zero") == 0) return 0;
 
 	if(tok[0] == '-') {
@@ -90,6 +99,16 @@ void throw_error(int line_num, char* error_msg) {
 	fputs("\n", stderr);
 }
 
+void throw_immediate_error(int line_num, char* error_msg) {
+	fputs("line ", stderr);
+	print_int(line_num, stderr);
+	fputs(": ", stderr);
+	fputs(error_msg, stderr);
+	fputs("\n", stderr);
+	
+	exit(1);
+}
+
 uint8_t execute_line(char* line, int line_num) {
 	char* op = strtok(line, " ");
 	char* dest = strtok(NULL, " ");
@@ -97,27 +116,30 @@ uint8_t execute_line(char* line, int line_num) {
 	char* src2 = strtok(NULL, " ");
 
 	if(strcmp(op, "add") == 0) {
+		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
-			int result = var_resolve(src1) + var_resolve(src2);
+			int result = var_resolve(line_num, src1) + var_resolve(line_num, src2);
 			var_set(dest, result);
 		}
 	}
 
 	else if(strcmp(op, "mul") == 0) {
+		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
-			int result = var_resolve(src1) * var_resolve(src2);
+			int result = var_resolve(line_num, src1) * var_resolve(line_num, src2);
 			var_set(dest, result);
 		}
 	}
 
 	else if(strcmp(op, "div") == 0) {
+		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
-			int src2_resolved = var_resolve(src2);
+			int src2_resolved = var_resolve(line_num, src2);
 			if(src2_resolved == 0) {
 				throw_error(line_num, "division by zero");
 				return ERR;	
 			}
-			int result = var_resolve(src1) / src2_resolved;
+			int result = var_resolve(line_num, src1) / src2_resolved;
 			var_set(dest, result);
 		}
 	}
@@ -144,14 +166,13 @@ uint8_t execute_line(char* line, int line_num) {
 	}
 
 	else if(strcmp(op, "mov") == 0) {
-
 		if(strcmp(src1, "stdin") == 0) {
 			char buf[16];
 			fgets(buf, sizeof(buf), stdin);
 
 			buf[strcspn(buf, "\n")] = '\0';
 
-			var_set(dest, var_resolve(buf));
+			var_set(dest, var_resolve(line_num, buf));
 			return OK;
 		}
 
@@ -167,11 +188,11 @@ uint8_t execute_line(char* line, int line_num) {
 			return ERR;
 		}
 		else {
-			var_set(dest, var_resolve(src1));
+			var_set(dest, var_resolve(line_num, src1));
 		}
 
 		if(stream) {
-			print_int(var_resolve(src1), stream);
+			print_int(var_resolve(line_num, src1), stream);
 			fputs("\n", stream);
 		}
 	}
