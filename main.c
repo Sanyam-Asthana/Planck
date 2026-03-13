@@ -8,6 +8,9 @@
 #define MAX_VARS 32
 #define MAX_CMD_LEN 64
 
+#define OK 0
+#define ERR 1
+
 typedef struct {
 	char id[16];
 	int val;
@@ -51,16 +54,15 @@ int var_resolve(char* tok) {
 	return var_get(tok);
 }
 
-void print_int(int n) {
+void print_int(int n, FILE* stream) {
     char buf[12];
     uint8_t i = 0;
     if(n < 0) {
-        putchar('-');
+        fputc('-', stream);
         n = -n;
     }
     if(n == 0) {
-        putchar('0');
-        putchar('\n');
+        fputc('0', stream);
         return;
     }
     while(n > 0) {
@@ -68,12 +70,19 @@ void print_int(int n) {
         n /= 10;
     }
     while(i > 0) {
-        putchar(buf[--i]);
+        fputc(buf[--i], stream);
     }
-    putchar('\n');
 }
 
-void execute_line(char* line) {
+void throw_error(int line_num, char* error_msg) {
+	fputs("line ", stderr);
+	print_int(line_num, stderr);
+	fputs(": ", stderr);
+	fputs(error_msg, stderr);
+	fputs("\n", stderr);
+}
+
+uint8_t execute_line(char* line, int line_num) {
 	char* op = strtok(line, " ");
 	char* dest = strtok(NULL, " ");
 	char* src1 = strtok(NULL, " ");
@@ -86,9 +95,28 @@ void execute_line(char* line) {
 		}
 	}
 
-	if(strcmp(op, "mul") == 0) {
+	else if(strcmp(op, "mul") == 0) {
 		if(strcmp(dest, "zero") != 0) {
 			int result = var_resolve(src1) * var_resolve(src2);
+			var_set(dest, result);
+		}
+	}
+
+	else if(strcmp(op, "sub") == 0) {
+		if(strcmp(dest, "zero") != 0) {
+			int result = var_resolve(src1) - var_resolve(src2);
+			var_set(dest, result);
+		}
+	}
+
+	else if(strcmp(op, "div") == 0) {
+		if(strcmp(dest, "zero") != 0) {
+			int src2_resolved = var_resolve(src2);
+			if(src2_resolved == 0) {
+				throw_error(line_num, "division by zero");
+				return ERR;	
+			}
+			int result = var_resolve(src1) / src2_resolved;
 			var_set(dest, result);
 		}
 	}
@@ -98,13 +126,16 @@ void execute_line(char* line) {
 	}
 
 	else if(strcmp(op, "putv") == 0) {
-		print_int(var_resolve(dest));
+		print_int(var_resolve(dest), stdout);
+		fputs("\n", stdout);
 	}
 
 	else {
-		fputs(op, stderr);
-		fputs(": unrecognized instruction!", stderr);
+		throw_error(line_num, "unrecognized instruction!");
+		return ERR;
 	}
+
+	return OK;
 }
 
 int main(int argc, char** argv) {
@@ -123,9 +154,15 @@ int main(int argc, char** argv) {
 	}
 
 	char line[MAX_CMD_LEN];
+	int line_num = 0;
 	while((fgets(line, sizeof(line), file)) != NULL) {
+		line_num++;
 		line[strcspn(line, "\n")] = '\0';
-		execute_line(line);
+		uint8_t status = execute_line(line, line_num);
+
+		if(status == ERR) {
+			return ERR;	
+		}
 	}
 }
 
