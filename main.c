@@ -115,6 +115,8 @@ uint8_t execute_line(char* line, int line_num) {
 	char* src1 = strtok(NULL, " ");
 	char* src2 = strtok(NULL, " ");
 
+	if(!op && !dest && !src1 && !src2) return OK;
+
 	if(strcmp(op, "add") == 0) {
 		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
