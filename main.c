@@ -122,8 +122,25 @@ uint8_t execute_line(char* line, int line_num) {
 		}
 	}
 
-	else if(strcmp(op, "puts") == 0) {
-		puts(dest);
+	else if(strcmp(op, "movstr") == 0) {
+		FILE* stream = NULL;
+		if(strcmp(dest, "stdout") == 0) {
+			stream = stdout;
+		}
+		else if(strcmp(dest, "stderr") == 0) {
+			stream = stderr;
+		}
+		else {
+			throw_error(line_num, "not a valid output stream!");
+			return ERR;
+		}
+		fputs(src1, stream);
+
+		if(src2) {
+			if(strcmp(src2, "br") == 0) {
+				fputs("\n", stream);
+			}
+		}
 	}
 
 	else if(strcmp(op, "mov") == 0) {
@@ -144,6 +161,10 @@ uint8_t execute_line(char* line, int line_num) {
 		}
 		else if(strcmp(dest, "stderr") == 0) {
 			stream = stderr;
+		}
+		else if(strcmp(dest, "stdin") == 0) {
+			throw_error(line_num, "stdin is not a valid destination!");
+			return ERR;
 		}
 		else {
 			var_set(dest, var_resolve(src1));
