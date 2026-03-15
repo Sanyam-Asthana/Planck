@@ -19,10 +19,28 @@ typedef struct {
 static var_t var_tabl[32];
 static uint8_t var_count = 0;
 
+void print_int(int n, FILE* stream);
+
 void throw_error(int line_num, char* error_msg);
-void throw_immediate_error(int line_num, char* error_msg);
+void throw_immediate_error(char* error_msg);
 
 void var_set(char* id, int val) {
+
+    if(strcmp(id, "stdout") == 0) {
+	    print_int(val, stdout);
+	    fputs("\n", stdout);
+	    return;
+    }
+
+    if(strcmp(id, "stderr") == 0) {
+	    print_int(val, stderr);
+	    fputs("\n", stderr);
+	    return;
+    }
+
+    if(strcmp(id, "stdin") == 0) {
+	    throw_immediate_error("cannot move into stdin!");
+    }
 
     for(int i = 0; i < var_count; i++) {
         if(strcmp(var_tabl[i].id, id) == 0) {
@@ -39,6 +57,13 @@ void var_set(char* id, int val) {
 }
 
 int var_get(char* id) {
+
+	if(strcmp(id, "stdin") == 0) {
+		char buf[16];
+		fgets(buf, sizeof(buf), stdin);
+		return atoi(buf);
+	}
+
 	for(int i = 0; i < var_count; i++) {
 		if(strcmp(var_tabl[i].id, id) == 0) {
 			return var_tabl[i].val;
@@ -50,9 +75,8 @@ int var_get(char* id) {
 
 int var_resolve(int line_num, char* tok) {
 	if((strcmp(tok, "stdout")) == 0
-	||(strcmp(tok, "stderr")) == 0
-	||(strcmp(tok, "stdin")) == 0)
-	throw_immediate_error(line_num, "not a valid variable name!");
+	||(strcmp(tok, "stderr")) == 0)
+	throw_immediate_error("not a valid variable name!");
 
 	if(strcmp(tok, "zero") == 0) return 0;
 
@@ -99,10 +123,8 @@ void throw_error(int line_num, char* error_msg) {
 	fputs("\n", stderr);
 }
 
-void throw_immediate_error(int line_num, char* error_msg) {
-	fputs("line ", stderr);
-	print_int(line_num, stderr);
-	fputs(": ", stderr);
+void throw_immediate_error(char* error_msg) {
+	fputs("runtime error: ", stderr);
 	fputs(error_msg, stderr);
 	fputs("\n", stderr);
 	
@@ -115,10 +137,11 @@ uint8_t execute_line(char* line, int line_num) {
 	char* src1 = strtok(NULL, " ");
 	char* src2 = strtok(NULL, " ");
 
-	if(!op && !dest && !src1 && !src2) return OK;
+	if(!op) return OK;
+	
+	if(strcmp(op, "#") == 0) return OK;
 
 	if(strcmp(op, "add") == 0) {
-		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
 			int result = var_resolve(line_num, src1) + var_resolve(line_num, src2);
 			var_set(dest, result);
@@ -126,7 +149,6 @@ uint8_t execute_line(char* line, int line_num) {
 	}
 
 	else if(strcmp(op, "mul") == 0) {
-		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
 			int result = var_resolve(line_num, src1) * var_resolve(line_num, src2);
 			var_set(dest, result);
@@ -134,14 +156,14 @@ uint8_t execute_line(char* line, int line_num) {
 	}
 
 	else if(strcmp(op, "div") == 0) {
-		var_resolve(line_num, dest);
 		if(strcmp(dest, "zero") != 0) {
+			int src1_resolved = var_resolve(line_num, src1);
 			int src2_resolved = var_resolve(line_num, src2);
 			if(src2_resolved == 0) {
 				throw_error(line_num, "division by zero");
 				return ERR;	
 			}
-			int result = var_resolve(line_num, src1) / src2_resolved;
+			int result = src1_resolved / src2_resolved;
 			var_set(dest, result);
 		}
 	}
@@ -210,6 +232,7 @@ uint8_t execute_line(char* line, int line_num) {
 int main(int argc, char** argv) {
 	if(argc < 2) {
 		fputs("usage: planck <filename>", stderr);
+		return ERR;
 	}
 	
 	const char* path = argv[1];
