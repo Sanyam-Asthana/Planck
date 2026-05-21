@@ -73,7 +73,7 @@ int var_get(char* id) {
 	return 0;
 }
 
-int var_resolve(int line_num, char* tok) {
+int var_resolve(char* tok) {
 	if((strcmp(tok, "stdout")) == 0
 	||(strcmp(tok, "stderr")) == 0)
 	throw_immediate_error("not a valid variable name!");
@@ -143,22 +143,22 @@ uint8_t execute_line(char* line, int line_num) {
 
 	if(strcmp(op, "add") == 0) {
 		if(strcmp(dest, "zero") != 0) {
-			int result = var_resolve(line_num, src1) + var_resolve(line_num, src2);
+			int result = var_resolve(src1) + var_resolve(src2);
 			var_set(dest, result);
 		}
 	}
 
 	else if(strcmp(op, "mul") == 0) {
 		if(strcmp(dest, "zero") != 0) {
-			int result = var_resolve(line_num, src1) * var_resolve(line_num, src2);
+			int result = var_resolve(src1) * var_resolve(src2);
 			var_set(dest, result);
 		}
 	}
 
 	else if(strcmp(op, "div") == 0) {
 		if(strcmp(dest, "zero") != 0) {
-			int src1_resolved = var_resolve(line_num, src1);
-			int src2_resolved = var_resolve(line_num, src2);
+			int src1_resolved = var_resolve(src1);
+			int src2_resolved = var_resolve(src2);
 			if(src2_resolved == 0) {
 				throw_error(line_num, "division by zero");
 				return ERR;	
@@ -196,7 +196,7 @@ uint8_t execute_line(char* line, int line_num) {
 
 			buf[strcspn(buf, "\n")] = '\0';
 
-			var_set(dest, var_resolve(line_num, buf));
+			var_set(dest, var_resolve(buf));
 			return OK;
 		}
 
@@ -212,11 +212,11 @@ uint8_t execute_line(char* line, int line_num) {
 			return ERR;
 		}
 		else {
-			var_set(dest, var_resolve(line_num, src1));
+			var_set(dest, var_resolve(src1));
 		}
 
 		if(stream) {
-			print_int(var_resolve(line_num, src1), stream);
+			print_int(var_resolve(src1), stream);
 			fputs("\n", stream);
 		}
 	}
